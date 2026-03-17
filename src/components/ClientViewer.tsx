@@ -3,6 +3,7 @@
 import { TimetableData, TimetableEntry } from '@/lib/stundenplan';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -196,8 +197,8 @@ export default function ClientViewer({ currentDateStr }: ClientViewerProps) {
       <div className="flex flex-col items-center justify-center min-h-[80vh]">
         <div className="w-full max-w-md bg-white dark:bg-black p-10 rounded-3xl shadow-2xl border border-zinc-200 dark:border-zinc-800">
           <div className="flex flex-col items-center mb-8">
-            <div className="bg-black dark:bg-white p-4 rounded-2xl mb-4">
-              <Calendar className="w-8 h-8 text-white dark:text-black" />
+            <div className="mb-4">
+              <Image src="/pfp.png" alt="Logo" width={80} height={80} className="rounded-3xl shadow-lg" priority />
             </div>
             <h2 className="text-3xl font-black tracking-tighter text-black dark:text-white">VPMobil25</h2>
             <p className="text-zinc-500 text-sm font-medium">Anmeldung erforderlich</p>
@@ -255,9 +256,7 @@ export default function ClientViewer({ currentDateStr }: ClientViewerProps) {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <div className="bg-black dark:bg-white p-2 rounded-lg">
-                <Calendar className="w-5 h-5 text-white dark:text-black" />
-              </div>
+              <Image src="/pfp.png" alt="Logo" width={48} height={48} className="rounded-xl shadow-sm" />
               <h1 className="text-4xl font-black tracking-tighter text-black dark:text-white">VPMobil25</h1>
             </div>
             <p className="text-lg font-bold text-zinc-400 dark:text-zinc-500 tracking-tight">
