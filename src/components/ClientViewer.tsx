@@ -1,7 +1,7 @@
 'use client';
 
 import { TimetableData, TimetableEntry } from '@/lib/stundenplan';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { 
@@ -10,14 +10,18 @@ import {
   Star, 
   LogOut, 
   User, 
+  Users,
+  Home,
   Lock, 
   School, 
   Loader2, 
   AlertCircle, 
   Calendar,
   Search,
-  CheckCircle2
+  CheckCircle2,
+  Command as CommandIcon
 } from 'lucide-react';
+import CommandPalette, { SearchItem } from './CommandPalette';
 
 interface ClientViewerProps {
   currentDateStr?: string;
@@ -54,6 +58,7 @@ export default function ClientViewer({ currentDateStr }: ClientViewerProps) {
   const [selectedValue, setSelectedValue] = useState<string>('');
   const [filteredEntries, setFilteredEntries] = useState<TimetableEntry[]>([]);
   const [favorites, setFavorites] = useState<Favorite[]>([]);
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
 
   // 1. Load credentials from localStorage on mount
   useEffect(() => {
@@ -70,7 +75,19 @@ export default function ClientViewer({ currentDateStr }: ClientViewerProps) {
     }
   }, []);
 
-  // 2. Data fetching function
+  // 2. Keyboard shortcut for Command Palette
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsPaletteOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // 3. Data fetching function
   const fetchData = useCallback(async (c: Credentials, date?: string) => {
     setIsLoading(true);
     setError(null);
@@ -113,14 +130,14 @@ export default function ClientViewer({ currentDateStr }: ClientViewerProps) {
     }
   }, []);
 
-  // 3. Fetch data when logged in or date changes
+  // 4. Fetch data when logged in or date changes
   useEffect(() => {
     if (isLogged && creds) {
       fetchData(creds, currentDateStr);
     }
   }, [isLogged, creds, currentDateStr, fetchData]);
 
-  // 4. Update filtering
+  // 5. Update filtering
   useEffect(() => {
     if (data && selectedValue) {
       let filtered: TimetableEntry[] = [];
@@ -156,15 +173,19 @@ export default function ClientViewer({ currentDateStr }: ClientViewerProps) {
     setError(null);
   };
 
-  const handleModeChange = (mode: FilterMode) => {
-    if (!data) return;
-    setFilterMode(mode);
-    const options = 
-      mode === 'class' ? data.availableClasses :
-      mode === 'room' ? data.availableRooms :
-      data.availableTeachers;
-    setSelectedValue(options[0] || '');
+  const handleSelect = (item: SearchItem) => {
+    setFilterMode(item.type);
+    setSelectedValue(item.name);
   };
+
+  const searchItems = useMemo(() => {
+    if (!data) return [];
+    const items: SearchItem[] = [];
+    data.availableClasses.forEach(c => items.push({ id: c, name: c, type: 'class' }));
+    data.availableRooms.forEach(r => items.push({ id: r, name: r, type: 'room' }));
+    data.availableTeachers.forEach(t => items.push({ id: t, name: t, type: 'teacher' }));
+    return items;
+  }, [data]);
 
   const toggleFavorite = () => {
     if (!selectedValue) return;
@@ -252,6 +273,13 @@ export default function ClientViewer({ currentDateStr }: ClientViewerProps) {
 
   return (
     <div className="mx-auto max-w-6xl animate-in fade-in duration-700">
+      <CommandPalette 
+        isOpen={isPaletteOpen} 
+        onClose={() => setIsPaletteOpen(false)} 
+        onSelect={handleSelect} 
+        items={searchItems}
+      />
+      
       <div className="bg-white dark:bg-zinc-950 rounded-[2.5rem] border-2 border-zinc-100 dark:border-zinc-900 shadow-2xl shadow-black/[0.05] overflow-hidden">
         {/* Header & Nav Section */}
         <div className="p-6 sm:p-10 border-b-2 border-zinc-50 dark:border-zinc-900/50">
@@ -307,73 +335,88 @@ export default function ClientViewer({ currentDateStr }: ClientViewerProps) {
             </div>
 
             {data && (
-              <div className="space-y-6 pt-2">
-                <div className="flex flex-wrap items-center gap-6">
-                  <div className="flex flex-col gap-2">
+              <div className="space-y-6 pt-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                  {/* Current Selection */}
+                  <div className="space-y-3">
                     <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-1.5 ml-1">
-                      <Search className="w-3 h-3" /> Filter
-                    </span>
-                    <div className="inline-flex bg-zinc-100 dark:bg-zinc-900 p-1.5 rounded-2xl">
-                      {(['class', 'room', 'teacher'] as const).map(m => (
-                        <button 
-                          key={m} 
-                          onClick={() => handleModeChange(m)} 
-                          className={`px-5 py-2.5 text-[10px] font-black tracking-widest rounded-xl transition-all ${
-                            filterMode === m 
-                            ? 'bg-black text-white dark:bg-white dark:text-black shadow-lg' 
-                            : 'text-zinc-500 hover:text-black dark:text-zinc-500 dark:hover:text-zinc-300'
-                          }`}
-                        >
-                          {m === 'class' ? 'KLASSE' : m === 'room' ? 'RAUM' : 'LEHRER'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2 flex-grow max-w-md">
-                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-1.5 ml-1">
-                      {filterMode === 'class' ? 'Klasse:' : filterMode === 'room' ? 'Raum:' : 'Lehrer:'}
+                      <Search className="w-3 h-3" /> Aktuelle Auswahl
                     </span>
                     <div className="flex items-center gap-3">
-                      <select 
-                        value={selectedValue} 
-                        onChange={e => setSelectedValue(e.target.value)} 
-                        className="flex-grow bg-zinc-100 dark:bg-zinc-900 border-2 border-transparent focus:border-black dark:focus:border-white rounded-2xl py-3 px-5 text-sm font-black outline-none transition-all text-black dark:text-white appearance-none"
+                      <button 
+                        onClick={() => setIsPaletteOpen(true)}
+                        className="flex-grow relative flex items-center justify-center bg-zinc-100 dark:bg-zinc-900 border-2 border-transparent hover:border-black dark:hover:border-white rounded-2xl py-2.5 px-6 transition-all group min-h-[64px]"
                       >
-                        {(filterMode === 'class' ? data.availableClasses : filterMode === 'room' ? data.availableRooms : data.availableTeachers).map(o => <option key={o} value={o}>{o}</option>)}
-                      </select>
+                        <div className="absolute left-6 p-1.5 bg-white dark:bg-zinc-800 rounded-lg shadow-sm group-hover:scale-110 transition-transform flex items-center justify-center">
+                          {filterMode === 'class' ? <Users className="w-4 h-4" /> : filterMode === 'room' ? <Home className="w-4 h-4" /> : <User className="w-4 h-4" />}
+                        </div>
+                        
+                        <div className="text-center">
+                          <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-0.5">
+                            {filterMode === 'class' ? 'Klasse' : filterMode === 'room' ? 'Raum' : 'Lehrer'}
+                          </p>
+                          <p className="text-xl font-black text-black dark:text-white tracking-tighter leading-none">
+                            {selectedValue}
+                          </p>
+                        </div>
+
+                        <div className="absolute right-6 flex items-center gap-2.5 text-zinc-300 group-hover:text-black dark:group-hover:text-white transition-colors">
+                          <kbd className="hidden md:inline-flex items-center gap-1 px-2 py-1 rounded bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-[10px] font-black shadow-sm">
+                            <CommandIcon className="w-2.5 h-2.5" /> K
+                          </kbd>
+                          <Search className="w-4 h-4" />
+                        </div>
+                      </button>
+
                       <button 
                         onClick={toggleFavorite} 
-                        className={`p-3.5 rounded-2xl border-2 transition-all active:scale-90 ${
+                        className={`p-4 rounded-2xl border-2 transition-all active:scale-90 h-[64px] w-[64px] flex items-center justify-center ${
                           isCurrentFavorite 
                           ? 'bg-black border-black text-white dark:bg-white dark:border-white dark:text-black shadow-lg shadow-black/10' 
                           : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-300 hover:text-black dark:hover:text-white'
                         }`}
                       >
-                        <Star className="w-5 h-5" fill={isCurrentFavorite ? "currentColor" : "none"} strokeWidth={3} />
+                        <Star className="w-6 h-6" fill={isCurrentFavorite ? "currentColor" : "none"} strokeWidth={3} />
                       </button>
                     </div>
                   </div>
-                </div>
 
-                {favorites.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-3 pt-5 border-t-2 border-zinc-50 dark:border-zinc-900/50">
-                    <span className="text-[9px] font-black text-zinc-300 dark:text-zinc-600 uppercase tracking-[0.3em] mr-2">Favoriten:</span>
-                    {favorites.map((f, i) => (
-                      <button 
-                        key={i} 
-                        onClick={() => { setFilterMode(f.mode); setSelectedValue(f.value); }} 
-                        className={`px-4 py-2 rounded-xl text-[10px] font-black tracking-widest border-2 transition-all hover:scale-105 active:scale-95 ${
-                          filterMode === f.mode && selectedValue === f.value 
-                          ? 'bg-zinc-100 border-zinc-100 text-black dark:bg-zinc-800 dark:border-zinc-800 dark:text-white' 
-                          : 'bg-transparent border-zinc-100 dark:border-zinc-900 text-zinc-400 dark:text-zinc-600'
-                        }`}
-                      >
-                        <span className="opacity-40 mr-1.5">{f.mode[0].toUpperCase()}</span>{f.value}
-                      </button>
-                    ))}
+                  {/* Favorites Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6 lg:mt-[23px]">
+                    {favorites.length > 0 ? (
+                      favorites.map((f, i) => {
+                        const isSelected = filterMode === f.mode && selectedValue === f.value;
+                        return (
+                          <button 
+                            key={i} 
+                            onClick={() => { setFilterMode(f.mode); setSelectedValue(f.value); }} 
+                            className={`relative flex items-center justify-center px-5 py-2.5 rounded-2xl border-2 transition-all min-h-[64px] ${
+                              isSelected 
+                              ? 'bg-black border-black text-white dark:bg-white dark:border-white dark:text-black shadow-lg' 
+                              : 'bg-zinc-100 dark:bg-zinc-900 border-transparent hover:border-zinc-300 dark:hover:border-zinc-700'
+                            }`}
+                          >
+                            <div className={`absolute left-5 p-1.5 rounded-lg flex items-center justify-center ${isSelected ? 'bg-white/20' : 'bg-white dark:bg-zinc-800 shadow-sm'}`}>
+                              {f.mode === 'class' ? <Users className="w-3.5 h-3.5" /> : f.mode === 'room' ? <Home className="w-3.5 h-3.5" /> : <User className="w-3.5 h-3.5" />}
+                            </div>
+                            <div className="text-center">
+                              <p className={`text-[9px] font-black uppercase tracking-widest mb-0.5 ${isSelected ? 'text-white/60' : 'text-zinc-400'}`}>
+                                {f.mode === 'class' ? 'Klasse' : f.mode === 'room' ? 'Raum' : 'Lehrer'}
+                              </p>
+                              <p className="text-base font-black tracking-tight leading-none">
+                                {f.value}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <div className="col-span-full py-4 px-6 rounded-2xl border-2 border-dashed border-zinc-100 dark:border-zinc-900 flex items-center justify-center h-[64px]">
+                        <p className="text-[9px] font-black text-zinc-300 dark:text-zinc-700 uppercase tracking-widest italic">Keine Favoriten</p>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             )}
           </header>
