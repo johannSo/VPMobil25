@@ -217,6 +217,7 @@ export default function ClientViewer({ currentDateStr }: ClientViewerProps) {
   };
 
   const isCurrentFavorite = favorites.some(f => f.mode === filterMode && f.value === selectedValue);
+  const showClassColumn = filterMode !== 'class';
 
   // --- RENDERING ---
 
@@ -474,7 +475,7 @@ export default function ClientViewer({ currentDateStr }: ClientViewerProps) {
                 <tbody className="divide-y-2 divide-zinc-50 dark:divide-zinc-900 bg-white dark:bg-black">
                   {filteredEntries.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-8 py-24 text-center">
+                      <td colSpan={showClassColumn ? 6 : 5} className="px-8 py-24 text-center">
                         <div className="flex flex-col items-center gap-3">
                           <CheckCircle2 className="w-8 h-8 text-zinc-100 dark:text-zinc-900" />
                           <p className="text-[11px] font-black text-zinc-300 dark:text-zinc-700 uppercase tracking-widest">Keine besonderen Vorkommnisse</p>
@@ -500,6 +501,11 @@ export default function ClientViewer({ currentDateStr }: ClientViewerProps) {
                           <td className={`px-3 sm:px-8 py-4 sm:py-6 text-base font-black tracking-tighter italic min-w-[100px] ${
                             isCancelled ? 'text-red-700 dark:text-red-300' : 'text-black dark:text-white'
                           }`}>{e.subject}</td>
+                          {showClassColumn && (
+                            <td className={`px-3 sm:px-8 py-4 sm:py-6 text-xs font-bold ${
+                              isCancelled ? 'text-red-600 dark:text-red-300/90' : 'text-zinc-500 dark:text-zinc-400'
+                            }`}>{e.class}</td>
+                          )}
                           <td className={`px-3 sm:px-8 py-4 sm:py-6 text-xs font-bold ${
                             isCancelled ? 'text-red-600 dark:text-red-300/90' : 'text-zinc-500 dark:text-zinc-400'
                           }`}>{e.teacher}</td>

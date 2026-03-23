@@ -4,6 +4,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import posthog from "posthog-js";
 import { PostHogProvider } from "posthog-js/react";
+import type { ConfigDefaults } from "@posthog/types";
 
 function PostHogPageview() {
   const pathname = usePathname();
@@ -28,10 +29,13 @@ export function PostHogProviderWrapper({
   useEffect(() => {
     const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
     if (!key) return;
+    const defaultsEnv = process.env.NEXT_PUBLIC_POSTHOG_DEFAULTS;
+    const isConfigDefaults = (value: string | undefined): value is ConfigDefaults =>
+      value === "2026-01-30" || value === "2025-11-30" || value === "2025-05-24" || value === "unset";
     posthog.init(key, {
       api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://z.timetablex.space",
       capture_pageview: false,
-      defaults: process.env.NEXT_PUBLIC_POSTHOG_DEFAULTS || "2026-01-30",
+      defaults: isConfigDefaults(defaultsEnv) ? defaultsEnv : "2026-01-30",
     });
   }, []);
 
