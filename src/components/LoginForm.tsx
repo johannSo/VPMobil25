@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { School, User, Lock } from 'lucide-react';
+import { School, User, Lock, ArrowRight } from 'lucide-react';
 import { Credentials } from '@/lib/types';
 
 interface LoginFormProps {
@@ -20,55 +20,180 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[80vh]">
-      <div className="w-full max-w-md bg-white dark:bg-black p-10 rounded-3xl shadow-2xl border border-zinc-200 dark:border-zinc-800">
-        <div className="flex flex-col items-center mb-8">
-          <div className="mb-4">
-            <Image src="/pfp.png" alt="Logo" width={80} height={80} className="rounded-3xl shadow-lg" priority />
+    <div className="flex flex-col items-center justify-center min-h-dvh px-4 py-12" style={{ background: 'var(--color-bg)' }}>
+      <div
+        className="w-full max-w-sm"
+        style={{
+          background: 'var(--color-surface)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-2xl)',
+          boxShadow: 'var(--shadow-lg)',
+          padding: '2.5rem',
+        }}
+      >
+        {/* Logo & Title */}
+        <div className="flex flex-col items-center mb-10">
+          <div className="mb-5">
+            <Image
+              src="/pfp.png"
+              alt="TimetableX Logo"
+              width={72}
+              height={72}
+              className="rounded-2xl"
+              priority
+            />
           </div>
-          <h2 className="text-3xl font-black tracking-tighter text-black dark:text-white">TimetableX</h2>
-          <p className="text-zinc-500 text-sm font-medium">Anmeldung erforderlich</p>
+          <h1
+            className="text-2xl font-bold tracking-tight mb-1"
+            style={{ color: 'var(--color-text)' }}
+          >
+            TimetableX
+          </h1>
+          <p className="text-base" style={{ color: 'var(--color-text-secondary)' }}>
+            Bitte melde dich an
+          </p>
         </div>
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* School */}
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest px-1">
-              <School className="w-3 h-3" /> Schulnummer
+            <label
+              htmlFor="school"
+              className="flex items-center gap-2 text-sm font-medium"
+              style={{ color: 'var(--color-text)' }}
+            >
+              <School className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
+              Schulnummer
             </label>
-            <input 
-              type="text" required 
+            <input
+              id="school"
+              type="text"
+              required
+              autoComplete="organization"
               placeholder="z.B. 12345678"
               value={input.school}
-              onChange={e => setInput({...input, school: e.target.value})}
-              className="w-full px-5 py-4 rounded-2xl border-2 border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-black dark:text-white focus:border-black dark:focus:border-white outline-none transition-all font-bold" 
+              onChange={e => setInput({ ...input, school: e.target.value })}
+              className="w-full text-base transition-all cursor-text"
+              style={{
+                padding: '0.875rem 1rem',
+                borderRadius: 'var(--radius-md)',
+                border: '1.5px solid var(--color-border)',
+                background: 'var(--color-bg)',
+                color: 'var(--color-text)',
+                outline: 'none',
+                fontFamily: 'inherit',
+              }}
+              onFocus={e => {
+                e.target.style.borderColor = 'var(--color-primary)';
+                e.target.style.boxShadow = '0 0 0 3px var(--color-primary-border)';
+              }}
+              onBlur={e => {
+                e.target.style.borderColor = 'var(--color-border)';
+                e.target.style.boxShadow = 'none';
+              }}
             />
           </div>
+
+          {/* Username */}
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest px-1">
-              <User className="w-3 h-3" /> Benutzer
+            <label
+              htmlFor="user"
+              className="flex items-center gap-2 text-sm font-medium"
+              style={{ color: 'var(--color-text)' }}
+            >
+              <User className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
+              Benutzername
             </label>
-            <input 
-              type="text" required
+            <input
+              id="user"
+              type="text"
+              required
+              autoComplete="username"
               placeholder="Benutzername"
               value={input.user}
-              onChange={e => setInput({...input, user: e.target.value})}
-              className="w-full px-5 py-4 rounded-2xl border-2 border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-black dark:text-white focus:border-black dark:focus:border-white outline-none transition-all font-bold" 
+              onChange={e => setInput({ ...input, user: e.target.value })}
+              className="w-full text-base transition-all cursor-text"
+              style={{
+                padding: '0.875rem 1rem',
+                borderRadius: 'var(--radius-md)',
+                border: '1.5px solid var(--color-border)',
+                background: 'var(--color-bg)',
+                color: 'var(--color-text)',
+                outline: 'none',
+                fontFamily: 'inherit',
+              }}
+              onFocus={e => {
+                e.target.style.borderColor = 'var(--color-primary)';
+                e.target.style.boxShadow = '0 0 0 3px var(--color-primary-border)';
+              }}
+              onBlur={e => {
+                e.target.style.borderColor = 'var(--color-border)';
+                e.target.style.boxShadow = 'none';
+              }}
             />
           </div>
+
+          {/* Password */}
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest px-1">
-              <Lock className="w-3 h-3" /> Passwort
+            <label
+              htmlFor="pass"
+              className="flex items-center gap-2 text-sm font-medium"
+              style={{ color: 'var(--color-text)' }}
+            >
+              <Lock className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
+              Passwort
             </label>
-            <input 
-              type="password" required
+            <input
+              id="pass"
+              type="password"
+              required
+              autoComplete="current-password"
               placeholder="••••••••"
               value={input.pass}
-              onChange={e => setInput({...input, pass: e.target.value})}
-              className="w-full px-5 py-4 rounded-2xl border-2 border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-black dark:text-white focus:border-black dark:focus:border-white outline-none transition-all font-bold" 
+              onChange={e => setInput({ ...input, pass: e.target.value })}
+              className="w-full text-base transition-all cursor-text"
+              style={{
+                padding: '0.875rem 1rem',
+                borderRadius: 'var(--radius-md)',
+                border: '1.5px solid var(--color-border)',
+                background: 'var(--color-bg)',
+                color: 'var(--color-text)',
+                outline: 'none',
+                fontFamily: 'inherit',
+              }}
+              onFocus={e => {
+                e.target.style.borderColor = 'var(--color-primary)';
+                e.target.style.boxShadow = '0 0 0 3px var(--color-primary-border)';
+              }}
+              onBlur={e => {
+                e.target.style.borderColor = 'var(--color-border)';
+                e.target.style.boxShadow = 'none';
+              }}
             />
           </div>
-          <button type="submit" className="w-full py-5 bg-black dark:bg-white text-white dark:text-black font-black rounded-2xl transition-all shadow-xl shadow-black/10 dark:shadow-white/5 active:scale-95 text-lg uppercase tracking-widest">
+
+          <button
+            type="submit"
+            className="w-full flex items-center justify-center gap-2 text-base font-semibold cursor-pointer transition-all active:scale-[0.98]"
+            style={{
+              padding: '0.9375rem 1.5rem',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--color-primary)',
+              color: '#ffffff',
+              border: 'none',
+              marginTop: '0.5rem',
+              boxShadow: 'var(--shadow-sm)',
+              fontFamily: 'inherit',
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-primary-hover)';
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-primary)';
+            }}
+          >
             Anmelden
+            <ArrowRight className="w-4 h-4" />
           </button>
         </form>
       </div>

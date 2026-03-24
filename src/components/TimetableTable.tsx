@@ -1,13 +1,7 @@
 'use client';
 
 import { TimetableEntry } from '@/lib/types';
-import { CheckCircle2 } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { CheckCircle2, XCircle } from 'lucide-react';
 
 interface TimetableTableProps {
   entries: TimetableEntry[];
@@ -22,65 +16,171 @@ function isCancelledEntry(entry: TimetableEntry): boolean {
 }
 
 export default function TimetableTable({ entries, showClassColumn }: TimetableTableProps) {
+  if (entries.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <div
+          className="flex items-center justify-center"
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: '50%',
+            background: 'var(--color-primary-light)',
+            color: 'var(--color-primary)',
+          }}
+        >
+          <CheckCircle2 className="w-7 h-7" strokeWidth={1.75} />
+        </div>
+        <div className="text-center">
+          <p className="text-base font-semibold" style={{ color: 'var(--color-text)' }}>
+            Keine Einträge
+          </p>
+          <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+            Für diese Auswahl gibt es keine Vertretungen.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y-2 divide-zinc-50 dark:divide-zinc-900">
-        <tbody className="divide-y-2 divide-zinc-50 dark:divide-zinc-900 bg-white dark:bg-black">
-          {entries.length === 0 ? (
-            <tr>
-              <td colSpan={showClassColumn ? 6 : 5} className="px-8 py-24 text-center">
-                <div className="flex flex-col items-center gap-3">
-                  <CheckCircle2 className="w-8 h-8 text-zinc-100 dark:text-zinc-900" />
-                  <p className="text-[11px] font-black text-zinc-300 dark:text-zinc-700 uppercase tracking-widest">Keine besonderen Vorkommnisse</p>
-                </div>
-              </td>
-            </tr>
-          ) : (
-            entries.map((e, i) => {
-              const isCancelled = isCancelledEntry(e);
+      <table
+        className="w-full"
+        style={{ borderCollapse: 'collapse' }}
+        role="table"
+        aria-label="Vertretungsplan"
+      >
+        {/* Accessible column headers (visually hidden) */}
+        <thead className="sr-only">
+          <tr>
+            <th scope="col">Stunde</th>
+            <th scope="col">Fach</th>
+            {showClassColumn && <th scope="col">Klasse</th>}
+            <th scope="col">Lehrer</th>
+            <th scope="col">Raum</th>
+            <th scope="col">Info</th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((e, i) => {
+            const cancelled = isCancelledEntry(e);
+            const isLast = i === entries.length - 1;
 
-              return (
-                <tr
-                  key={i}
-                  className={cn(
-                    "border-b last:border-0",
-                    isCancelled
-                      ? 'border-red-200 bg-red-50/90 dark:border-red-950/60 dark:bg-red-950/20'
-                      : 'border-zinc-50 dark:border-zinc-900/50'
-                  )}
+            return (
+              <tr
+                key={i}
+                style={{
+                  borderBottom: isLast ? 'none' : `1px solid ${cancelled ? 'var(--color-danger-border)' : 'var(--color-border-subtle)'}`,
+                  background: cancelled ? 'var(--color-danger-bg)' : 'transparent',
+                  transition: 'background 150ms ease',
+                }}
+              >
+                {/* Hour */}
+                <td
+                  className="text-center font-bold text-base"
+                  style={{
+                    padding: '1rem 0.75rem 1rem 1.25rem',
+                    color: cancelled ? 'var(--color-danger)' : 'var(--color-text)',
+                    width: 52,
+                    whiteSpace: 'nowrap',
+                  }}
                 >
-                  <td className={cn(
-                    "px-3 sm:px-8 py-4 sm:py-6 text-sm font-black italic w-12 text-center",
-                    isCancelled ? 'text-red-700 dark:text-red-300' : 'text-black dark:text-white'
-                  )}>{e.hour}</td>
-                  <td className={cn(
-                    "px-3 sm:px-8 py-4 sm:py-6 text-base font-black tracking-tighter italic min-w-[100px]",
-                    isCancelled ? 'text-red-700 dark:text-red-300' : 'text-black dark:text-white'
-                  )}>{e.subject}</td>
-                  {showClassColumn && (
-                    <td className={cn(
-                      "px-3 sm:px-8 py-4 sm:py-6 text-xs font-bold",
-                      isCancelled ? 'text-red-600 dark:text-red-300/90' : 'text-zinc-500 dark:text-zinc-400'
-                    )}>{e.class}</td>
-                  )}
-                  <td className={cn(
-                    "px-3 sm:px-8 py-4 sm:py-6 text-xs font-bold",
-                    isCancelled ? 'text-red-600 dark:text-red-300/90' : 'text-zinc-500 dark:text-zinc-400'
-                  )}>{e.teacher}</td>
-                  <td className={cn(
-                    "px-3 sm:px-8 py-4 sm:py-6 text-sm font-black text-center",
-                    isCancelled
-                      ? 'bg-red-100/80 text-red-700 dark:bg-red-950/40 dark:text-red-200'
-                      : 'bg-zinc-50/30 text-black dark:bg-zinc-900/30 dark:text-white'
-                  )}>{e.room}</td>
-                  <td className={cn(
-                    "px-3 sm:px-8 py-4 sm:py-6 text-xs italic font-bold leading-relaxed",
-                    isCancelled ? 'text-red-600 dark:text-red-300/90' : 'text-zinc-400 dark:text-zinc-500'
-                  )}>{e.info}</td>
-                </tr>
-              );
-            })
-          )}
+                  {e.hour}
+                </td>
+
+                {/* Subject */}
+                <td
+                  style={{
+                    padding: '1rem 1rem',
+                    minWidth: 100,
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    {cancelled && (
+                      <XCircle
+                        className="w-4 h-4 flex-shrink-0"
+                        style={{ color: 'var(--color-danger)' }}
+                        strokeWidth={2}
+                        aria-label="Ausfall"
+                      />
+                    )}
+                    <span
+                      className="font-semibold text-base"
+                      style={{
+                        color: cancelled ? 'var(--color-danger)' : 'var(--color-text)',
+                        textDecoration: cancelled ? 'line-through' : 'none',
+                        textDecorationColor: 'var(--color-danger)',
+                      }}
+                    >
+                      {e.subject}
+                    </span>
+                  </div>
+                </td>
+
+                {/* Class (conditional) */}
+                {showClassColumn && (
+                  <td
+                    className="text-sm font-medium"
+                    style={{
+                      padding: '1rem 1rem',
+                      color: cancelled ? 'var(--color-danger)' : 'var(--color-text-secondary)',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {e.class}
+                  </td>
+                )}
+
+                {/* Teacher */}
+                <td
+                  className="text-sm font-medium"
+                  style={{
+                    padding: '1rem 1rem',
+                    color: cancelled ? 'var(--color-danger)' : 'var(--color-text-secondary)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {e.teacher}
+                </td>
+
+                {/* Room */}
+                <td
+                  className="text-sm font-semibold"
+                  style={{
+                    padding: '1rem 1rem',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      padding: '0.25rem 0.625rem',
+                      borderRadius: 'var(--radius-sm)',
+                      background: cancelled ? 'var(--color-danger-border)' : 'var(--color-primary-light)',
+                      color: cancelled ? 'var(--color-danger)' : 'var(--color-primary)',
+                      fontSize: '0.8125rem',
+                    }}
+                  >
+                    {e.room}
+                  </span>
+                </td>
+
+                {/* Info */}
+                <td
+                  className="text-sm"
+                  style={{
+                    padding: '1rem 1.25rem 1rem 0.75rem',
+                    color: cancelled ? 'var(--color-danger)' : 'var(--color-text-secondary)',
+                    fontStyle: e.info ? 'normal' : 'italic',
+                    maxWidth: 260,
+                  }}
+                >
+                  {e.info || ''}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

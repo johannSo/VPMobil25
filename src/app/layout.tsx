@@ -3,20 +3,22 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const viewport: Viewport = {
-  themeColor: "#000000",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F8FAFC" },
+    { media: "(prefers-color-scheme: dark)", color: "#0F172A" },
+  ],
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
 };
 
 export const metadata: Metadata = {
   title: "TimetableX",
-  description: "The better version of VPMobil24",
+  description: "Der bessere Vertretungsplan",
   appleWebApp: {
     capable: true,
     title: "TimetableX",
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
   },
 };
 
@@ -26,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="de">
       <body className="antialiased">
         <Providers>{children}</Providers>
         <script

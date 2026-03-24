@@ -2,12 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  Loader2, 
-  AlertCircle, 
-  Calendar,
-  CheckCircle2
-} from 'lucide-react';
+import { Loader2, AlertCircle, Calendar, CheckCircle2, RefreshCw } from 'lucide-react';
 
 import CommandPalette from './CommandPalette';
 import LoginForm from './LoginForm';
@@ -27,20 +22,19 @@ export default function ClientViewer({ currentDateStr }: ClientViewerProps) {
   const router = useRouter();
   const { creds, isLogged, login, logout, isInitialized } = useAuth();
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
-  const { 
-    data, 
-    error, 
-    isLoading, 
-    filteredEntries, 
-    filterMode, 
-    setFilterMode, 
-    selectedValue, 
-    setSelectedValue 
+  const {
+    data,
+    error,
+    isLoading,
+    filteredEntries,
+    filterMode,
+    setFilterMode,
+    selectedValue,
+    setSelectedValue,
   } = useTimetable(creds, currentDateStr);
 
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
 
-  // Keyboard shortcut for Command Palette
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -53,7 +47,7 @@ export default function ClientViewer({ currentDateStr }: ClientViewerProps) {
   }, []);
 
   const handleSelect = (item: SearchItem) => {
-    setFilterMode(item.type);
+    setFilterMode(item.type as FilterMode);
     setSelectedValue(item.name);
   };
 
@@ -67,34 +61,43 @@ export default function ClientViewer({ currentDateStr }: ClientViewerProps) {
   }, [data]);
 
   const navigateDay = (offset: number) => {
-    const dateToParse = currentDateStr || (new Date().toISOString().slice(0, 10).replace(/-/g, ''));
-    const date = new Date(
-      parseInt(dateToParse.slice(0, 4)), 
-      parseInt(dateToParse.slice(4, 6)) - 1, 
-      parseInt(dateToParse.slice(6, 8))
+    const base = currentDateStr || new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const d = new Date(
+      parseInt(base.slice(0, 4)),
+      parseInt(base.slice(4, 6)) - 1,
+      parseInt(base.slice(6, 8))
     );
-    date.setDate(date.getDate() + offset);
-    const nextDateStr = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
-    router.push(`/?date=${nextDateStr}`);
+    d.setDate(d.getDate() + offset);
+    const next = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+    router.push(`/?date=${next}`);
   };
 
   if (!isInitialized) return null;
+  if (!isLogged) return <LoginForm onLogin={login} />;
 
-  if (!isLogged) {
-    return <LoginForm onLogin={login} />;
-  }
+  const isEmptyDay =
+    data?.isWeekend || (data && data.entries.length === 0 && !data.dayNotes?.length);
 
   return (
-    <div className="mx-auto max-w-6xl animate-in fade-in duration-700 pb-12">
-      <CommandPalette 
-        isOpen={isPaletteOpen} 
-        onClose={() => setIsPaletteOpen(false)} 
-        onSelect={handleSelect} 
+    <div className="mx-auto max-w-5xl">
+      <CommandPalette
+        isOpen={isPaletteOpen}
+        onClose={() => setIsPaletteOpen(false)}
+        onSelect={handleSelect}
         items={searchItems}
       />
-      
-      <div className="bg-white dark:bg-zinc-950 rounded-[2.5rem] border-2 border-zinc-100 dark:border-zinc-900 shadow-2xl shadow-black/[0.05] overflow-hidden">
-        <TimetableHeader 
+
+      {/* Main card */}
+      <div
+        style={{
+          background: 'var(--color-surface)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-2xl)',
+          boxShadow: 'var(--shadow-md)',
+          overflow: 'hidden',
+        }}
+      >
+        <TimetableHeader
           isLoading={isLoading}
           dateText={data?.date}
           onNavigate={navigateDay}
@@ -111,61 +114,149 @@ export default function ClientViewer({ currentDateStr }: ClientViewerProps) {
           }}
         />
 
-        <div className="relative">
+        {/* Content area */}
+        <div>
           {isLoading && !data ? (
-            <div className="flex flex-col items-center justify-center py-24 gap-6">
-              <Loader2 className="w-12 h-12 text-zinc-200 dark:text-zinc-800 animate-spin" strokeWidth={1.5} />
-              <p className="text-[10px] font-black text-zinc-300 dark:text-zinc-700 uppercase tracking-[0.5em] animate-pulse">Synchronisierung läuft</p>
+            /* Loading skeleton */
+            <div className="flex flex-col items-center justify-center py-24 gap-5">
+              <Loader2
+                className="w-10 h-10 animate-spin"
+                style={{ color: 'var(--color-primary)' }}
+                strokeWidth={1.75}
+              />
+              <p
+                className="text-sm font-medium"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                Daten werden geladen…
+              </p>
             </div>
           ) : error ? (
-            <div className="p-12 text-center">
-              <AlertCircle className="w-10 h-10 text-zinc-300 dark:text-zinc-700 mx-auto mb-4" />
-              <p className="text-black dark:text-white font-black mb-2 uppercase tracking-tight">{error.message}</p>
-              <p className="text-xs text-zinc-400 font-medium">Plan existiert evtl. noch nicht oder Login-Daten sind abgelaufen.</p>
-              <button 
-                onClick={() => router.push('/')}
-                className="mt-8 px-8 py-3 bg-black dark:bg-white text-white dark:text-black text-xs font-black rounded-xl uppercase tracking-widest active:scale-95 transition-all shadow-lg"
+            /* Error state */
+            <div className="flex flex-col items-center justify-center py-20 px-6 gap-5 text-center">
+              <div
+                className="flex items-center justify-center"
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: '50%',
+                  background: 'var(--color-danger-bg)',
+                  color: 'var(--color-danger)',
+                }}
               >
+                <AlertCircle className="w-7 h-7" strokeWidth={1.75} />
+              </div>
+              <div>
+                <p className="text-base font-semibold mb-1" style={{ color: 'var(--color-text)' }}>
+                  {error.message}
+                </p>
+                <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                  Der Plan existiert möglicherweise noch nicht oder die Anmeldedaten sind abgelaufen.
+                </p>
+              </div>
+              <button
+                onClick={() => router.push('/')}
+                className="flex items-center gap-2 text-sm font-semibold cursor-pointer transition-all active:scale-[0.97]"
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--color-primary)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontFamily: 'inherit',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-primary-hover)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'var(--color-primary)')}
+              >
+                <RefreshCw className="w-4 h-4" strokeWidth={2} />
+                Erneut versuchen
+              </button>
+            </div>
+          ) : isEmptyDay ? (
+            /* Empty / weekend state */
+            <div className="flex flex-col items-center justify-center py-20 px-6 gap-5 text-center">
+              <div
+                className="flex items-center justify-center"
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: '50%',
+                  background: 'var(--color-primary-light)',
+                  color: 'var(--color-primary)',
+                }}
+              >
+                {data?.isWeekend
+                  ? <Calendar className="w-7 h-7" strokeWidth={1.75} />
+                  : <CheckCircle2 className="w-7 h-7" strokeWidth={1.75} />
+                }
+              </div>
+              <div>
+                <p className="text-base font-semibold mb-1" style={{ color: 'var(--color-text)' }}>
+                  {data?.isWeekend ? 'Wochenende' : 'Keine Vertretungen'}
+                </p>
+                <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                  {data?.isWeekend
+                    ? 'Genieß die freie Zeit! Es ist kein Plan verfügbar.'
+                    : 'Für heute liegen keine besonderen Änderungen vor.'}
+                </p>
+              </div>
+              <button
+                onClick={() => router.push('/')}
+                className="flex items-center gap-2 text-sm font-medium cursor-pointer transition-all active:scale-[0.97]"
+                style={{
+                  padding: '0.625rem 1.25rem',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1.5px solid var(--color-border)',
+                  background: 'var(--color-bg)',
+                  color: 'var(--color-text-secondary)',
+                  fontFamily: 'inherit',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'var(--color-primary)';
+                  e.currentTarget.style.color = 'var(--color-primary)';
+                  e.currentTarget.style.background = 'var(--color-primary-light)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = 'var(--color-border)';
+                  e.currentTarget.style.color = 'var(--color-text-secondary)';
+                  e.currentTarget.style.background = 'var(--color-bg)';
+                }}
+              >
+                <RefreshCw className="w-3.5 h-3.5" strokeWidth={2} />
                 Aktualisieren
               </button>
             </div>
-          ) : data?.isWeekend || (data && data.entries.length === 0 && !data.dayNotes) ? (
-            <div className="p-12 text-center animate-in fade-in duration-500">
-              <div className="space-y-4">
-                <div className="bg-zinc-100 dark:bg-zinc-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
-                  {data.isWeekend ? <Calendar className="w-8 h-8 text-zinc-400" /> : <CheckCircle2 className="w-8 h-8 text-zinc-400" />}
-                </div>
-                <p className="text-xl font-black text-black dark:text-white uppercase tracking-tight">
-                  {data.isWeekend ? 'Wochenende' : 'Keine Vertretungen'}
-                </p>
-                <p className="text-sm text-zinc-500 font-medium">
-                  {data.isWeekend ? 'Genieß die freie Zeit! Es ist kein Plan verfügbar.' : 'Für heute liegen keine besonderen Änderungen vor.'}
-                </p>
-                <button 
-                  onClick={() => router.push('/')}
-                  className="mt-8 px-8 py-3 bg-black dark:bg-white text-white dark:text-black text-xs font-black rounded-xl uppercase tracking-widest active:scale-95 transition-all shadow-lg mx-auto"
-                >
-                  Aktualisieren
-                </button>
-              </div>
-            </div>
           ) : data ? (
-            <TimetableTable 
-              entries={filteredEntries} 
-              showClassColumn={filterMode !== 'class'} 
+            <TimetableTable
+              entries={filteredEntries}
+              showClassColumn={filterMode !== 'class'}
             />
           ) : null}
         </div>
 
+        {/* Day notes */}
         {data?.dayNotes && data.dayNotes.length > 0 && (
-          <div className="bg-amber-50 dark:bg-amber-950/20 border-t-2 border-amber-100 dark:border-amber-900/50 p-6 sm:p-10 space-y-3">
-            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
-              <AlertCircle className="w-5 h-5" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Besondere Hinweise</span>
+          <div
+            style={{
+              borderTop: '1px solid var(--color-warning-border)',
+              background: 'var(--color-warning-bg)',
+              padding: '1.25rem 1.5rem',
+            }}
+          >
+            <div
+              className="flex items-center gap-2 mb-3"
+              style={{ color: 'var(--color-warning)' }}
+            >
+              <AlertCircle className="w-4 h-4 flex-shrink-0" strokeWidth={2} />
+              <span className="text-sm font-semibold">Besondere Hinweise</span>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {data.dayNotes.map((note, i) => (
-                <p key={i} className="text-sm font-bold text-amber-900 dark:text-amber-200 leading-relaxed">
+                <p
+                  key={i}
+                  className="text-sm leading-relaxed"
+                  style={{ color: 'var(--color-text)' }}
+                >
                   {note}
                 </p>
               ))}

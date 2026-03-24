@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, Users, Home, User, Command, X, ChevronRight } from 'lucide-react';
+import { Search, Users, MapPin, User, X } from 'lucide-react';
 import { SearchItem } from '@/lib/types';
 
 interface CommandPaletteProps {
@@ -11,6 +11,18 @@ interface CommandPaletteProps {
   items: SearchItem[];
 }
 
+const typeLabel: Record<SearchItem['type'], string> = {
+  class: 'Klasse',
+  room: 'Raum',
+  teacher: 'Lehrer',
+};
+
+const TypeIcon = ({ type }: { type: SearchItem['type'] }) => {
+  const props = { className: 'w-4 h-4', strokeWidth: 1.75 as number };
+  if (type === 'class') return <Users {...props} />;
+  if (type === 'room') return <MapPin {...props} />;
+  return <User {...props} />;
+};
 
 export default function CommandPalette({ isOpen, onClose, onSelect, items }: CommandPaletteProps) {
   const [search, setSearch] = useState('');
@@ -27,38 +39,28 @@ export default function CommandPalette({ isOpen, onClose, onSelect, items }: Com
   }, [isOpen]);
 
   const filteredItems = useMemo(() => {
-    const searchLower = search.toLowerCase();
-    const filtered = items.filter(item =>
-      item.name.toLowerCase().includes(searchLower) ||
-      item.type.toLowerCase().includes(searchLower)
-    );
-
-    // Sort: exact matches first, then starts with, then includes
-    return filtered.sort((a, b) => {
-      const aName = a.name.toLowerCase();
-      const bName = b.name.toLowerCase();
-      
-      if (aName === searchLower) return -1;
-      if (bName === searchLower) return 1;
-      
-      if (aName.startsWith(searchLower) && !bName.startsWith(searchLower)) return -1;
-      if (!aName.startsWith(searchLower) && bName.startsWith(searchLower)) return 1;
-      
-      return a.name.localeCompare(b.name);
-    }).slice(0, 15);
+    const q = search.toLowerCase();
+    return items
+      .filter(item => item.name.toLowerCase().includes(q) || item.type.toLowerCase().includes(q))
+      .sort((a, b) => {
+        const an = a.name.toLowerCase();
+        const bn = b.name.toLowerCase();
+        if (an === q) return -1;
+        if (bn === q) return 1;
+        if (an.startsWith(q) && !bn.startsWith(q)) return -1;
+        if (!an.startsWith(q) && bn.startsWith(q)) return 1;
+        return a.name.localeCompare(b.name);
+      })
+      .slice(0, 15);
   }, [items, search]);
 
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [search]);
+  useEffect(() => { setSelectedIndex(0); }, [search]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return;
-
-      if (e.key === 'Escape') {
-        onClose();
-      } else if (e.key === 'ArrowDown') {
+      if (e.key === 'Escape') { onClose(); }
+      else if (e.key === 'ArrowDown') {
         e.preventDefault();
         setSelectedIndex(prev => (prev + 1) % Math.max(1, filteredItems.length));
       } else if (e.key === 'ArrowUp') {
@@ -66,163 +68,265 @@ export default function CommandPalette({ isOpen, onClose, onSelect, items }: Com
         setSelectedIndex(prev => (prev - 1 + filteredItems.length) % Math.max(1, filteredItems.length));
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        if (filteredItems[selectedIndex]) {
-          onSelect(filteredItems[selectedIndex]);
-          onClose();
-        }
+        if (filteredItems[selectedIndex]) { onSelect(filteredItems[selectedIndex]); onClose(); }
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, filteredItems, selectedIndex, onSelect, onClose]);
 
   useEffect(() => {
-    const activeItem = document.getElementById(`item-${selectedIndex}`);
-    if (activeItem && scrollRef.current) {
-      const container = scrollRef.current;
-      const itemTop = activeItem.offsetTop;
-      const itemHeight = activeItem.offsetHeight;
-      const containerScrollTop = container.scrollTop;
-      const containerHeight = container.offsetHeight;
-
-      if (itemTop < containerScrollTop) {
-        container.scrollTop = itemTop - 10;
-      } else if (itemTop + itemHeight > containerScrollTop + containerHeight) {
-        container.scrollTop = itemTop + itemHeight - containerHeight + 10;
-      }
+    const el = document.getElementById(`palette-item-${selectedIndex}`);
+    if (el && scrollRef.current) {
+      const c = scrollRef.current;
+      const top = el.offsetTop;
+      const h = el.offsetHeight;
+      if (top < c.scrollTop) c.scrollTop = top - 8;
+      else if (top + h > c.scrollTop + c.offsetHeight) c.scrollTop = top + h - c.offsetHeight + 8;
     }
   }, [selectedIndex]);
 
   if (!isOpen) return null;
 
-  const getTypeIcon = (type: SearchItem['type']) => {
-    switch (type) {
-      case 'class': return <Users className="w-4 h-4" />;
-      case 'room': return <Home className="w-4 h-4" />;
-      case 'teacher': return <User className="w-4 h-4" />;
+  // Group items by type
+  const groups: { type: SearchItem['type']; items: (SearchItem & { originalIndex: number })[] }[] = [];
+  filteredItems.forEach((item, idx) => {
+    const last = groups[groups.length - 1];
+    if (!last || last.type !== item.type) {
+      groups.push({ type: item.type, items: [{ ...item, originalIndex: idx }] });
+    } else {
+      last.items.push({ ...item, originalIndex: idx });
     }
-  };
-
-  const getTypeText = (type: SearchItem['type']) => {
-    switch (type) {
-      case 'class': return 'Klasse';
-      case 'room': return 'Raum';
-      case 'teacher': return 'Lehrer';
-    }
-  };
+  });
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[12vh] px-4 animate-in fade-in duration-200">
-      <div className="fixed inset-0 bg-black/30 dark:bg-black/70 backdrop-blur-[2px]" onClick={onClose} />
-      
-      <div 
-        className="w-full max-w-2xl bg-white/95 dark:bg-black/90 backdrop-blur-2xl rounded-2xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.35)] border border-zinc-200 dark:border-zinc-800 overflow-hidden animate-in zoom-in-95 slide-in-from-top-4 duration-300 relative"
+    <div
+      className="fixed inset-0 z-[100] flex items-start justify-center pt-[10vh] px-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Suche"
+    >
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0"
+        style={{ background: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(4px)' }}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      {/* Panel */}
+      <div
+        className="relative w-full max-w-xl overflow-hidden"
+        style={{
+          background: 'var(--color-surface)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-xl)',
+          boxShadow: '0 24px 64px -12px rgba(0,0,0,0.25)',
+          animation: 'palette-in 180ms ease',
+        }}
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center px-6 py-5 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-950/60">
-          <Search className="w-6 h-6 text-zinc-500 dark:text-zinc-400 mr-4" />
+        {/* Search input */}
+        <div
+          className="flex items-center gap-3 px-4 py-3.5"
+          style={{ borderBottom: '1px solid var(--color-border)' }}
+        >
+          <Search
+            className="w-5 h-5 flex-shrink-0"
+            style={{ color: 'var(--color-primary)' }}
+            strokeWidth={2}
+          />
           <input
             ref={inputRef}
-            type="text"
-            placeholder="Suchen nach Klassen, Räumen oder Lehrern..."
-            className="flex-grow bg-transparent border-none outline-none text-2xl font-medium text-black dark:text-white placeholder:text-zinc-400 tracking-tight"
+            type="search"
+            placeholder="Klasse, Raum oder Lehrer suchen…"
+            aria-label="Suche"
+            className="flex-1 text-base bg-transparent border-none outline-none"
+            style={{
+              color: 'var(--color-text)',
+              fontFamily: 'inherit',
+            }}
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
+          <button
+            onClick={onClose}
+            aria-label="Schließen"
+            className="flex items-center justify-center cursor-pointer transition-colors flex-shrink-0"
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--color-border)',
+              background: 'transparent',
+              color: 'var(--color-text-muted)',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'var(--color-border-subtle)';
+              e.currentTarget.style.color = 'var(--color-text)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = 'var(--color-text-muted)';
+            }}
+          >
+            <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+          </button>
         </div>
 
-        <div className="max-h-[55vh] overflow-y-auto overflow-x-hidden scrollbar-none custom-scrollbar" ref={scrollRef}>
+        {/* Results */}
+        <div
+          ref={scrollRef}
+          className="overflow-y-auto"
+          style={{ maxHeight: '52vh' }}
+        >
           {filteredItems.length > 0 ? (
-            <div className="p-2 space-y-0.5">
-              {filteredItems.map((item, index) => {
-                const isSelected = index === selectedIndex;
-                const isFirstOfGroup = index === 0 || filteredItems[index - 1].type !== item.type;
-                
-                return (
-                  <React.Fragment key={`${item.type}-${item.id}`}>
-                    {isFirstOfGroup && (
-                      <div className="px-4 pt-4 pb-2">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400/80">
-                          {getTypeText(item.type)}n
-                        </p>
-                      </div>
-                    )}
-                    <button
-                      id={`item-${index}`}
-                      className={`group w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 ${
-                        isSelected 
-                        ? 'bg-black text-white dark:bg-white dark:text-black shadow-lg shadow-black/15 dark:shadow-white/10' 
-                        : 'hover:bg-zinc-100 dark:hover:bg-zinc-900'
-                      }`}
-                      onClick={() => {
-                        onSelect(item);
-                        onClose();
-                      }}
-                      onMouseEnter={() => setSelectedIndex(index)}
+            <div className="p-2">
+              {groups.map(group => (
+                <div key={group.type}>
+                  {/* Group header */}
+                  <div
+                    className="flex items-center gap-2 px-3 pt-3 pb-1.5"
+                  >
+                    <span
+                      className="text-xs font-semibold uppercase tracking-wider"
+                      style={{ color: 'var(--color-text-muted)' }}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg transition-colors ${
-                          isSelected 
-                          ? 'bg-white/15 text-white dark:bg-zinc-100 dark:text-black' 
-                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 group-hover:bg-zinc-200 dark:group-hover:bg-zinc-700'
-                        }`}>
-                          {getTypeIcon(item.type)}
+                      {typeLabel[group.type]}n
+                    </span>
+                  </div>
+
+                  {/* Group items */}
+                  {group.items.map(item => {
+                    const isSelected = item.originalIndex === selectedIndex;
+                    return (
+                      <button
+                        key={`${item.type}-${item.id}`}
+                        id={`palette-item-${item.originalIndex}`}
+                        role="option"
+                        aria-selected={isSelected}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all text-left"
+                        style={{
+                          borderRadius: 'var(--radius-md)',
+                          background: isSelected ? 'var(--color-primary)' : 'transparent',
+                          border: 'none',
+                          fontFamily: 'inherit',
+                        }}
+                        onClick={() => { onSelect(item); onClose(); }}
+                        onMouseEnter={() => setSelectedIndex(item.originalIndex)}
+                      >
+                        <div
+                          className="flex items-center justify-center flex-shrink-0"
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 'var(--radius-sm)',
+                            background: isSelected ? 'rgba(255,255,255,0.2)' : 'var(--color-primary-light)',
+                            color: isSelected ? '#ffffff' : 'var(--color-primary)',
+                          }}
+                        >
+                          <TypeIcon type={item.type} />
                         </div>
-                        <div className="text-left">
-                          <p className={`text-base font-bold tracking-tight ${isSelected ? 'text-white dark:text-black' : 'text-zinc-900 dark:text-zinc-100'}`}>
-                            {item.name}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-3">
+                        <span
+                          className="text-base font-medium"
+                          style={{
+                            color: isSelected ? '#ffffff' : 'var(--color-text)',
+                          }}
+                        >
+                          {item.name}
+                        </span>
                         {isSelected && (
-                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/15 text-white/90 dark:bg-zinc-100 dark:text-black">
-                            <span className="text-[10px] font-black tracking-widest uppercase">Auswählen</span>
-                            <ChevronRight className="w-3 h-3" />
-                          </div>
+                          <span
+                            className="ml-auto text-xs font-medium px-2 py-0.5"
+                            style={{
+                              borderRadius: 'var(--radius-sm)',
+                              background: 'rgba(255,255,255,0.2)',
+                              color: 'rgba(255,255,255,0.9)',
+                            }}
+                          >
+                            ↵ Auswählen
+                          </span>
                         )}
-                      </div>
-                    </button>
-                  </React.Fragment>
-                );
-              })}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           ) : (
-            <div className="py-20 text-center space-y-4">
-              <div className="inline-flex p-4 rounded-3xl bg-zinc-50 dark:bg-zinc-800/50">
-                <Search className="w-8 h-8 text-zinc-300 dark:text-zinc-600" />
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <div
+                className="flex items-center justify-center"
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: '50%',
+                  background: 'var(--color-border-subtle)',
+                  color: 'var(--color-text-muted)',
+                }}
+              >
+                <Search className="w-5 h-5" strokeWidth={1.75} />
               </div>
-              <div>
-                <p className="text-zinc-900 dark:text-zinc-100 font-bold text-lg tracking-tight">Keine Treffer</p>
-                <p className="text-zinc-400 text-sm">Versuchen Sie es mit einem anderen Suchbegriff.</p>
+              <div className="text-center">
+                <p className="text-base font-medium" style={{ color: 'var(--color-text)' }}>
+                  Keine Ergebnisse
+                </p>
+                <p className="text-sm mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
+                  Versuche einen anderen Suchbegriff.
+                </p>
               </div>
             </div>
           )}
         </div>
 
-        <div className="px-6 py-4 bg-zinc-50/80 dark:bg-zinc-950/80 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-[11px] font-medium text-zinc-500 dark:text-zinc-400 tracking-tight">
-          <div className="flex items-center gap-6">
-             <div className="flex items-center gap-2">
-               <span className="flex items-center justify-center w-5 h-5 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-[10px] shadow-sm italic">↑↓</span>
-               <span>Navigieren</span>
-             </div>
-             <div className="flex items-center gap-2">
-               <span className="flex items-center justify-center h-5 px-1.5 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-[10px] shadow-sm italic">Enter</span>
-               <span>Auswählen</span>
-             </div>
-             <div className="flex items-center gap-2">
-               <span className="flex items-center justify-center h-5 px-1.5 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-[10px] shadow-sm italic">ESC</span>
-               <span>Schließen</span>
-             </div>
+        {/* Footer hints */}
+        <div
+          className="flex items-center justify-between px-4 py-3"
+          style={{
+            borderTop: '1px solid var(--color-border)',
+            background: 'var(--color-bg)',
+          }}
+        >
+          <div className="flex items-center gap-4">
+            {[
+              { key: '↑↓', label: 'Navigieren' },
+              { key: '↵', label: 'Auswählen' },
+              { key: 'ESC', label: 'Schließen' },
+            ].map(hint => (
+              <div key={hint.key} className="flex items-center gap-1.5">
+                <kbd
+                  className="text-xs px-1.5 py-0.5 font-medium"
+                  style={{
+                    borderRadius: 4,
+                    border: '1px solid var(--color-border)',
+                    background: 'var(--color-surface)',
+                    color: 'var(--color-text-secondary)',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  {hint.key}
+                </kbd>
+                <span className="text-xs hidden sm:inline" style={{ color: 'var(--color-text-muted)' }}>
+                  {hint.label}
+                </span>
+              </div>
+            ))}
           </div>
-          <div className="flex items-center gap-1 opacity-50">
-            <Command className="w-3 h-3" />
-            <span className="font-black uppercase tracking-widest text-[9px]">TimetableX</span>
-          </div>
+          <span
+            className="text-xs font-semibold"
+            style={{ color: 'var(--color-text-muted)' }}
+          >
+            TimetableX
+          </span>
         </div>
       </div>
+
+      <style>{`
+        @keyframes palette-in {
+          from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `}</style>
     </div>
   );
 }
