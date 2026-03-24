@@ -8,13 +8,17 @@
     "start": "next start"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.95.2",
     "@types/xml2js": "^0.4.14",
+    "clsx": "^2.1.1",
     "lucide-react": "^0.577.0",
     "next": "16.1.7",
     "posthog-js": "^1.362.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "xml2js": "^0.6.2"
+    "tailwind-merge": "^3.5.0",
+    "xml2js": "^0.6.2",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

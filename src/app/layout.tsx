@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { PostHogProviderWrapper } from "./posthog";
+import { Providers } from "./providers";
 
 export const viewport: Viewport = {
   themeColor: "#000000",
@@ -28,7 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        <PostHogProviderWrapper>{children}</PostHogProviderWrapper>
+        <Providers>{children}</Providers>
         <script
           dangerouslySetInnerHTML={{
             __html: `

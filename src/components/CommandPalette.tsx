@@ -2,12 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, Users, Home, User, Command, X, ChevronRight } from 'lucide-react';
-
-export type SearchItem = {
-  id: string;
-  name: string;
-  type: 'class' | 'room' | 'teacher';
-};
+import { SearchItem } from '@/lib/types';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -15,6 +10,7 @@ interface CommandPaletteProps {
   onSelect: (item: SearchItem) => void;
   items: SearchItem[];
 }
+
 
 export default function CommandPalette({ isOpen, onClose, onSelect, items }: CommandPaletteProps) {
   const [search, setSearch] = useState('');
