@@ -5,6 +5,7 @@ import { useEffect, Suspense, useState } from "react"
 import posthog from 'posthog-js'
 import { PostHogProvider as PHProvider } from 'posthog-js/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import HapticsProvider from '@/components/HapticsProvider'
 
 function PostHogPageView() {
   const pathname = usePathname()
@@ -52,6 +53,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <Suspense fallback={null}>
           <PostHogPageView />
         </Suspense>
+        <HapticsProvider />
         {children}
       </PHProvider>
     </QueryClientProvider>
