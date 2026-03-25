@@ -1,22 +1,25 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
+import BackgroundField from "@/components/BackgroundField";
 
 export const viewport: Viewport = {
-  themeColor: "#000000",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F7F3EE" },
+    { media: "(prefers-color-scheme: dark)", color: "#0F1112" },
+  ],
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
 };
 
 export const metadata: Metadata = {
   title: "TimetableX",
-  description: "The better version of VPMobil24",
+  description: "Der bessere Vertretungsplan",
   appleWebApp: {
     capable: true,
     title: "TimetableX",
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
   },
 };
 
@@ -26,8 +29,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="de">
       <body className="antialiased">
+        <BackgroundField />
         <Providers>{children}</Providers>
         <script
           dangerouslySetInnerHTML={{
