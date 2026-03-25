@@ -29,7 +29,10 @@ export default function HapticsProvider() {
       if (!isMobilePointer()) return;
       if (event.pointerType !== 'touch') return;
       if (!isInteractive(event.target as Element | null)) return;
-      haptics.trigger('nudge');
+      haptics.trigger([
+        { duration: 8 },
+      ], { intensity: 1 }
+      );
     };
 
     document.addEventListener('pointerdown', handlePointerDown, { passive: true });
