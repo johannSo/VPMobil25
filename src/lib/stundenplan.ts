@@ -24,12 +24,80 @@ function cleanValue(val: any): string {
   return actualVal.trim();
 }
 
+/**
+ * Checks if a value object from xml2js has an "Ae" (Aenderung/Change) attribute.
+ * E.g. std.Ra[0].$.RaAe === 'RaGeaendert'
+ */
+function hasChangeFlag(val: any, attrName: string): boolean {
+  if (typeof val === 'object' && val?.$ && val?.$[attrName]) {
+    return true;
+  }
+  return false;
+}
+
+export const SAMPLE_DATA: TimetableData = {
+  title: 'Beispiel Stundenplan',
+  date: 'Montag, 30. März 2026 (Beispieldaten)',
+  entries: [
+    {
+      class: '5/1',
+      hour: '1',
+      subject: 'MA',
+      teacher: 'KNO',
+      room: '313',
+      info: '---'
+    },
+    {
+      class: '5/1',
+      hour: '2',
+      subject: 'DE',
+      teacher: 'MEY',
+      room: '311',
+      info: 'Vertretung für AUE',
+      teacherChanged: true
+    },
+    {
+      class: '5/1',
+      hour: '3',
+      subject: 'EN',
+      teacher: 'STZ',
+      room: 'E204',
+      info: 'Raumänderung: Zimmer E204',
+      roomChanged: true
+    },
+    {
+      class: '9/2',
+      hour: '4',
+      subject: 'CH',
+      teacher: 'HIN',
+      room: '328',
+      info: 'Klassenänderung: Kurs 9/2+9/3'
+    },
+    {
+      class: '10/1',
+      hour: '5',
+      subject: 'SPO',
+      teacher: '---',
+      room: '---',
+      info: 'Sport fällt aus'
+    }
+  ],
+  availableClasses: ['5/1', '9/2', '10/1'],
+  availableRooms: ['313', '311', 'E204', '328'],
+  availableTeachers: ['KNO', 'MEY', 'STZ', 'HIN'],
+  currentDateStr: '20260330'
+};
+
 export async function fetchStundenplan(
   school: string,
   user: string,
   pass: string,
   dateStr?: string
 ): Promise<TimetableData> {
+  if (school === 'sample' || school === 'demo') {
+    return SAMPLE_DATA;
+  }
+
   let targetDateStr = dateStr;
   if (!targetDateStr) {
     const now = new Date();
@@ -108,6 +176,11 @@ export async function fetchStundenplan(
           teacher: cleanValue(std.Le?.[0]),
           room: cleanValue(std.Ra?.[0]),
           info: cleanValue(std.If?.[0]),
+          // Flags from XML attributes
+          hourChanged: hasChangeFlag(std.St?.[0], 'StAe'),
+          subjectChanged: hasChangeFlag(std.Fa?.[0], 'FaAe'),
+          teacherChanged: hasChangeFlag(std.Le?.[0], 'LeAe'),
+          roomChanged: hasChangeFlag(std.Ra?.[0], 'RaAe'),
         };
         
         entries.push(entry);
@@ -133,4 +206,3 @@ export async function fetchStundenplan(
     throw error;
   }
 }
-

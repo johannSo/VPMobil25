@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Credentials, TimetableData, FilterMode, TimetableEntry } from '@/lib/types';
 import { useMemo, useState, useEffect } from 'react';
+import { useBlacklist } from './useBlacklist';
 
 const FETCH_KEY = 'timetable';
 
@@ -20,6 +21,8 @@ export function useTimetable(creds: Credentials | null, date?: string) {
     }
     return '';
   });
+
+  const { currentBlacklist, addToBlacklist, removeFromBlacklist } = useBlacklist(selectedValue);
 
   const { data, error, isLoading, isFetching, refetch } = useQuery<TimetableData, Error>({
     queryKey: [FETCH_KEY, creds?.school, creds?.user, date],
@@ -44,8 +47,8 @@ export function useTimetable(creds: Credentials | null, date?: string) {
                       filterMode === 'room' ? data.availableRooms : 
                       data.availableTeachers;
       
-      if (!selectedValue || !options.includes(selectedValue)) {
-        setSelectedValue(options[0] || '');
+      if (!selectedValue && options.length > 0) {
+        setSelectedValue(options[0]);
       }
     }
   }, [data, filterMode, selectedValue]);
@@ -60,14 +63,18 @@ export function useTimetable(creds: Credentials | null, date?: string) {
     if (!data || !selectedValue) return [];
     
     const filtered = data.entries.filter(e => {
-      if (filterMode === 'class') return e.class === selectedValue;
-      if (filterMode === 'room') return e.room === selectedValue;
-      if (filterMode === 'teacher') return e.teacher === selectedValue;
-      return false;
+      let isMatch = false;
+      if (filterMode === 'class') isMatch = e.class === selectedValue;
+      else if (filterMode === 'room') isMatch = e.room === selectedValue;
+      else if (filterMode === 'teacher') isMatch = e.teacher === selectedValue;
+      
+      if (!isMatch) return false;
+      if (currentBlacklist.includes(e.subject)) return false;
+      return true;
     });
 
     return [...filtered].sort((a, b) => (parseInt(a.hour) || 0) - (parseInt(b.hour) || 0));
-  }, [data, filterMode, selectedValue]);
+  }, [data, filterMode, selectedValue, currentBlacklist]);
 
   return {
     data,
@@ -78,6 +85,9 @@ export function useTimetable(creds: Credentials | null, date?: string) {
     setFilterMode,
     selectedValue,
     setSelectedValue,
-    refetch
+    refetch,
+    currentBlacklist,
+    addToBlacklist,
+    removeFromBlacklist
   };
 }

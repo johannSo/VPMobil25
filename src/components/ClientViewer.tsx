@@ -8,10 +8,12 @@ import CommandPalette from './CommandPalette';
 import LoginForm from './LoginForm';
 import TimetableHeader from './TimetableHeader';
 import TimetableTable from './TimetableTable';
+import BlacklistModal from './BlacklistModal';
 
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useFavorites } from '@/lib/hooks/useFavorites';
 import { useTimetable } from '@/lib/hooks/useTimetable';
+import { useAvailableSubjects } from '@/lib/hooks/useAvailableSubjects';
 import { SearchItem, FilterMode } from '@/lib/types';
 
 interface ClientViewerProps {
@@ -31,9 +33,19 @@ export default function ClientViewer({ currentDateStr }: ClientViewerProps) {
     setFilterMode,
     selectedValue,
     setSelectedValue,
+    currentBlacklist,
+    addToBlacklist,
+    removeFromBlacklist
   } = useTimetable(creds, currentDateStr);
 
+  const { availableSubjects, isLoadingSubjects } = useAvailableSubjects(
+    creds,
+    filterMode,
+    selectedValue
+  );
+
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  const [isBlacklistOpen, setIsBlacklistOpen] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -68,6 +80,16 @@ export default function ClientViewer({ currentDateStr }: ClientViewerProps) {
       parseInt(base.slice(6, 8))
     );
     d.setDate(d.getDate() + offset);
+
+    // Wochenende überspringen
+    if (offset > 0) {
+      if (d.getDay() === 6) d.setDate(d.getDate() + 2); // Samstag zu Montag
+      else if (d.getDay() === 0) d.setDate(d.getDate() + 1); // Sonntag zu Montag
+    } else if (offset < 0) {
+      if (d.getDay() === 0) d.setDate(d.getDate() - 2); // Sonntag zu Freitag
+      else if (d.getDay() === 6) d.setDate(d.getDate() - 1); // Samstag zu Freitag
+    }
+
     const next = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
     router.push(`/?date=${next}`);
   };
@@ -89,6 +111,16 @@ export default function ClientViewer({ currentDateStr }: ClientViewerProps) {
         onSelect={handleSelect}
         items={searchItems}
       />
+      <BlacklistModal
+        isOpen={isBlacklistOpen}
+        onClose={() => setIsBlacklistOpen(false)}
+        currentEntity={selectedValue}
+        availableSubjects={availableSubjects}
+        isLoadingSubjects={isLoadingSubjects}
+        currentBlacklist={currentBlacklist}
+        addToBlacklist={addToBlacklist}
+        removeFromBlacklist={removeFromBlacklist}
+      />
 
       {/* Main card */}
       <div className="panel panel-flat">
@@ -108,6 +140,7 @@ export default function ClientViewer({ currentDateStr }: ClientViewerProps) {
             setFilterMode(mode);
             setSelectedValue(value);
           }}
+          onOpenBlacklist={() => setIsBlacklistOpen(true)}
         />
 
         {/* Content area */}
@@ -179,12 +212,12 @@ export default function ClientViewer({ currentDateStr }: ClientViewerProps) {
               </div>
               <div>
                 <p className="text-base font-semibold mb-1" style={{ color: 'var(--color-text)' }}>
-                  {data?.isWeekend ? 'Wochenende' : 'Keine Vertretungen'}
+                  {data?.isWeekend ? 'Wochenende' : 'Kein Unterricht'}
                 </p>
                 <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                   {data?.isWeekend
                     ? 'Genieß die freie Zeit! Es ist kein Plan verfügbar.'
-                    : 'Für heute liegen keine besonderen Änderungen vor.'}
+                    : 'An diesem Tag findet kein Unterricht statt oder der Plan ist noch nicht verfügbar.'}
                 </p>
               </div>
               <button

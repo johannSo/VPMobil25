@@ -12,6 +12,7 @@ import {
   User,
   Star,
   CalendarDays,
+  ShieldBan,
 } from 'lucide-react';
 import { Favorite, FilterMode } from '@/lib/types';
 import { useRouter } from 'next/navigation';
@@ -29,6 +30,7 @@ interface TimetableHeaderProps {
   favorites: Favorite[];
   isToday: boolean;
   onSelectFavorite: (mode: FilterMode, value: string) => void;
+  onOpenBlacklist: () => void;
 }
 
 const modeLabel: Record<FilterMode, string> = {
@@ -57,6 +59,7 @@ export default function TimetableHeader({
   favorites,
   isToday,
   onSelectFavorite,
+  onOpenBlacklist,
 }: TimetableHeaderProps) {
   const router = useRouter();
   const cleanDate = dateText ? dateText.replace(/\s*\(Aktualisiert:.*\)\s*$/u, '') : '';
@@ -178,6 +181,16 @@ export default function TimetableHeader({
               </kbd>
               <Search className="w-4 h-4" style={{ color: 'var(--color-text-muted)' }} />
             </div>
+          </button>
+
+          {/* Blacklist toggle */}
+          <button
+            onClick={onOpenBlacklist}
+            aria-label="Fächer verbergen"
+            className="favorite-btn"
+            style={{ flexShrink: 0 }}
+          >
+            <ShieldBan className="w-5 h-5 block" strokeWidth={2} />
           </button>
 
           {/* Favorite toggle */}
