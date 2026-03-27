@@ -15,6 +15,24 @@ function isCancelledEntry(entry: TimetableEntry): boolean {
   );
 }
 
+function changeFlags(infoRaw: string) {
+  const info = (infoRaw || '').toLowerCase();
+  if (!info || info === '---') return { room: false, teacher: false, hour: false, class: false, subject: false };
+
+  // Room changes often mention "raum", "zimmer", "r." or "geändert"
+  const room = /(raum|r\.|zimmer)/.test(info);
+  // Teacher changes: "für", "vertretung", "vtr", "lehr", "statt"
+  const teacher = /(für|vertret|vtr|lehr)/.test(info);
+  // Hour changes: "verlegt", "st.", "std", "zeit"
+  const hour = /(verlegt|st\.|std|zeit|block|uhr)/.test(info);
+  // Class changes: "klasse", "kurs", "kl.", "gruppe"
+  const className = /(klasse|kurs|kl\.|gruppe)/.test(info);
+  // Subject changes: "fach", "statt" (if not teacher)
+  const subject = /fach/.test(info) || ( /statt/.test(info) && !teacher );
+
+  return { room, teacher, hour, class: className, subject };
+}
+
 export default function TimetableTable({ entries, showClassColumn }: TimetableTableProps) {
   if (entries.length === 0) {
     return (
@@ -65,7 +83,19 @@ export default function TimetableTable({ entries, showClassColumn }: TimetableTa
         <tbody>
           {entries.map((e, i) => {
             const cancelled = isCancelledEntry(e);
+            const flags = changeFlags(e.info);
+            
+            // Combine textual flags with direct flags from data
+            const roomChanged = flags.room || e.roomChanged;
+            const teacherChanged = flags.teacher || e.teacherChanged;
+            const hourChanged = flags.hour || e.hourChanged;
+            const classChanged = flags.class; // Usually not in XML flags
+            const subjectChanged = flags.subject || e.subjectChanged;
+            
             const isLast = i === entries.length - 1;
+
+            // Use a specific red color if var might be failing
+            const redColor = '#F7768E';
 
             return (
               <tr
@@ -80,7 +110,7 @@ export default function TimetableTable({ entries, showClassColumn }: TimetableTa
                   className="text-center font-bold text-base"
                   style={{
                     padding: '1rem 0.75rem 1rem 1.25rem',
-                    color: cancelled ? 'var(--color-danger)' : 'var(--color-text)',
+                    color: cancelled || hourChanged ? redColor : 'var(--color-text)',
                     width: 52,
                     whiteSpace: 'nowrap',
                   }}
@@ -99,7 +129,7 @@ export default function TimetableTable({ entries, showClassColumn }: TimetableTa
                     {cancelled && (
                       <XCircle
                         className="w-4 h-4 flex-shrink-0"
-                        style={{ color: 'var(--color-danger)' }}
+                        style={{ color: redColor }}
                         strokeWidth={2}
                         aria-label="Ausfall"
                       />
@@ -107,9 +137,9 @@ export default function TimetableTable({ entries, showClassColumn }: TimetableTa
                     <span
                       className="font-semibold text-base"
                       style={{
-                        color: cancelled ? 'var(--color-danger)' : 'var(--color-text)',
+                        color: cancelled || subjectChanged ? redColor : 'var(--color-text)',
                         textDecorationLine: cancelled ? 'line-through' : 'none',
-                        textDecorationColor: 'var(--color-danger)',
+                        textDecorationColor: redColor,
                       }}
                     >
                       {e.subject}
@@ -123,7 +153,7 @@ export default function TimetableTable({ entries, showClassColumn }: TimetableTa
                     className="text-sm font-medium"
                     style={{
                       padding: '1rem 1rem',
-                      color: cancelled ? 'var(--color-danger)' : 'var(--color-text-secondary)',
+                      color: cancelled || classChanged ? redColor : 'var(--color-text-secondary)',
                       whiteSpace: 'nowrap',
                     }}
                   >
@@ -136,7 +166,7 @@ export default function TimetableTable({ entries, showClassColumn }: TimetableTa
                   className="text-sm font-medium"
                   style={{
                     padding: '1rem 1rem',
-                    color: cancelled ? 'var(--color-danger)' : 'var(--color-text-secondary)',
+                    color: cancelled || teacherChanged ? redColor : 'var(--color-text-secondary)',
                     whiteSpace: 'nowrap',
                   }}
                 >
@@ -154,8 +184,9 @@ export default function TimetableTable({ entries, showClassColumn }: TimetableTa
                   <span
                     className="badge"
                     style={{
-                      background: cancelled ? 'var(--color-danger-border)' : 'var(--color-primary-light)',
-                      color: cancelled ? 'var(--color-danger)' : 'var(--color-primary)',
+                      background: cancelled || roomChanged ? 'var(--color-danger-bg)' : 'var(--color-primary-light)',
+                      color: cancelled || roomChanged ? redColor : 'var(--color-primary)',
+                      border: cancelled || roomChanged ? `1px solid var(--color-danger-border)` : 'none',
                     }}
                   >
                     {e.room}
@@ -167,8 +198,8 @@ export default function TimetableTable({ entries, showClassColumn }: TimetableTa
                   className="text-sm"
                   style={{
                     padding: '1rem 1.25rem 1rem 0.75rem',
-                    color: cancelled ? 'var(--color-danger)' : 'var(--color-text-secondary)',
-                    fontStyle: e.info ? 'normal' : 'italic',
+                    color: cancelled ? redColor : 'var(--color-text-secondary)',
+                    fontStyle: e.info && e.info !== '---' ? 'normal' : 'italic',
                     maxWidth: 260,
                   }}
                 >
@@ -182,3 +213,5 @@ export default function TimetableTable({ entries, showClassColumn }: TimetableTa
     </div>
   );
 }
+
+

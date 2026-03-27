@@ -7,6 +7,10 @@ export interface TimetableEntry {
   teacher: string;
   room: string;
   info: string;
+  roomChanged?: boolean;
+  teacherChanged?: boolean;
+  subjectChanged?: boolean;
+  hourChanged?: boolean;
 }
 
 export interface TimetableData {
